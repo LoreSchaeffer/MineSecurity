@@ -1,5 +1,4 @@
-name: MineSecurity
-main: it.multicoredev.minesecurity.Main
-version: 1.1
-depend: [MBCore]
-authors: [LoreSchaeffer]
+name: ${project.name}
+main: it.multicoredev.minesecurity.MineSecurity
+version: ${project.version}
+author: LoreSchaeffer

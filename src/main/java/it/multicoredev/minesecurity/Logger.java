@@ -1,16 +1,18 @@
 package it.multicoredev.minesecurity;
 
-import it.mineblock.mbcore.spigot.Chat;
+import it.multicoredev.mbcore.spigot.Chat;
 import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * Copyright © 2018 by Lorenzo Magni
+ * Copyright © 2018-2020 by Lorenzo Magni
  * This file is part of MineSecurity.
  * MineSecurity is under "The 3-Clause BSD License", you can find a copy <a href="https://opensource.org/licenses/BSD-3-Clause">here</a>.
  * <p>
@@ -31,67 +33,59 @@ import java.util.Date;
  */
 
 public class Logger {
+    private static final SimpleDateFormat DATE = new SimpleDateFormat("dd-MM-yyyy");
+    private static final SimpleDateFormat TIME = new SimpleDateFormat("HH:mm:ss");
+    private final Plugin plugin;
     private String filename;
+    private File dir;
     private File log;
 
-    public Logger() {
-        init(new Date());
+    public Logger(Plugin plugin) {
+        this.plugin = plugin;
+        dir = new File(plugin.getDataFolder(), "logs");
     }
 
     private void init(Date date) {
-        Bukkit.getScheduler().runTaskAsynchronously(Main.plugin, () -> {
-            filename = Main.DATE.format(date) + ".log";
-            log = new File(Main.plugin.getDataFolder(), filename);
+        if (!dir.exists() || !dir.isDirectory()) {
+            if (!dir.mkdir()) Chat.info("&4Cannot create log directory.");
+        }
 
-            if(!log.exists()) {
-                try {
-                    if(!log.createNewFile()) {
-                        Chat.getLogger("IOException, cannot create log", "severe");
-                        return;
-                    }
-                } catch (IOException e) {
-                    Chat.getLogger("IOException, cannot create log", "severe");
-                    e.printStackTrace();
+        filename = DATE.format(date) + ".log";
+        log = new File(dir, filename);
+
+        if (!log.exists()) {
+            try {
+                if (!log.createNewFile()) {
+                    Chat.severe("&4Cannot create log file.");
                 }
+            } catch (IOException e) {
+                Chat.severe("&4" + e.getMessage());
+                e.printStackTrace();
             }
-        });
+        }
     }
 
-    void add(String msg, String mode, String server, String username, boolean logToConsole) {
+    void log(String msg) {
         Date date = new Date();
         init(date);
 
-        if(logToConsole) {
-            Chat.getLogger(msg, mode);
-        }
+        Chat.info(msg);
 
-        Bukkit.getScheduler().runTaskAsynchronously(Main.plugin, () -> {
-            String time = Main.TIME.format(date);
-            String message = Chat.getDecolored(msg);
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            String time = TIME.format(date);
+            String message = Chat.getDiscolored(msg);
 
-            if((server == null || server.isEmpty()) && (username == null || username.isEmpty())) {
-                message = "[" + time + "] - " + message;
-            }
-            else if(server == null || server.isEmpty()) {
-                message = "[" + time + "] - " + username + " -> " + message;
-            } else if(username == null || username.isEmpty()) {
-                message = "[" + time + "] - " + server + " -> " + message;
-            } else {
-                message = "[" + time + "] - " + server + " : " + username + " -> " + message;
-            }
+            message = "[" + time + "] - " + message;
 
             try {
                 BufferedWriter writer = new BufferedWriter(new FileWriter(log, true));
                 writer.append(message).append("\n");
+                writer.flush();
                 writer.close();
             } catch (IOException e) {
-                Chat.getLogger("IOException, cannot write log", "severe");
+                Chat.severe("&4" + e.getMessage());
                 e.printStackTrace();
             }
         });
-    }
-
-    void add(String msg, String mode) {
-        add(msg, mode, null, null, true);
     }
 }

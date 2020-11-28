@@ -1,5 +1,3 @@
 proxy-address: "127.0.0.1"
 proxy-port: 25565
-kick-messages:
-  - &4You are kicked!
-  - &cPlease use our bungeecord to join this server.
+kick-msg: "&4You are kicked!\n&cPlease use our bungeecord to join this server."

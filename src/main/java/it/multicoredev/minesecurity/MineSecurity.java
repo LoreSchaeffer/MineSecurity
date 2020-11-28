@@ -1,19 +1,17 @@
 package it.multicoredev.minesecurity;
 
-import it.mineblock.mbcore.spigot.Chat;
-import it.mineblock.mbcore.spigot.ConfigManager;
-import it.mineblock.mbcore.spigot.config.Configuration;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.plugin.Plugin;
+import it.multicoredev.mclib.yaml.Configuration;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.List;
+import java.io.IOException;
 
 /**
- * Copyright © 2018 by Lorenzo Magni
+ * Copyright © 2018-2020 by Lorenzo Magni
  * This file is part of MineSecurity.
  * MineSecurity is under "The 3-Clause BSD License", you can find a copy <a href="https://opensource.org/licenses/BSD-3-Clause">here</a>.
  * <p>
@@ -33,35 +31,46 @@ import java.util.List;
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-public class Main extends JavaPlugin {
-    static final SimpleDateFormat DATE = new SimpleDateFormat("dd-MM-yyyy");
-    static final SimpleDateFormat TIME = new SimpleDateFormat("HH:mm:ss");
-    static String address;
-    static int port;
-    static List<String> kickMsgs;
-    static Plugin plugin;
-    static Logger logger;
+public class MineSecurity extends JavaPlugin implements Listener {
+    private String address;
+    private int port;
+    private String kickMsg;
+    private Logger logger;
 
     public void onEnable() {
-        plugin = this;
-        ConfigManager configManager = new ConfigManager();
-        Configuration config = configManager.autoloadConfig(this, "MineSecurity", getResource("config.yml"), new File(getDataFolder(), "config.yml"), "config.yml");
+        Configuration config = new Configuration(new File(getDataFolder(), "config.yml"), getResource("config.yml"));
+
+        try {
+            if (!getDataFolder().exists() || !getDataFolder().isDirectory()) {
+                if (!getDataFolder().mkdir()) throw new IOException();
+            }
+
+            config.autoload();
+        } catch (IOException e) {
+            e.printStackTrace();
+            onDisable();
+            return;
+        }
+
+        getServer().getPluginManager().registerEvents(this, this);
 
         address = config.getString("proxy-address");
         port = config.getInt("proxy-port");
-        kickMsgs = config.getStringList("kick-messages");
+        kickMsg = config.getString("kick-msg");
 
-        logger = new Logger();
-
-        getServer().getPluginManager().registerEvents(new OnPlayerJoin(), this);
+        logger = new Logger(this);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if(command.getName().equals("msreload") && sender.hasPermission("minesecurity.reload")) {
-            onEnable();
-            Chat.send("&2Minesecurity reloaded!", sender, true);
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerJoin(PlayerLoginEvent event) {
+        String ip = event.getRealAddress().getHostAddress();
+        String port = event.getHostname();
+
+        if (!address.equalsIgnoreCase(ip) || !port.endsWith(":" + port)) {
+            logger.log(event.getPlayer().getName() + " tried to login from an external bungeecord. (" + ip + ":" + port.split(":")[1] + ")");
+
+            event.setResult(PlayerLoginEvent.Result.KICK_OTHER);
+            event.setKickMessage(kickMsg);
         }
-        return true;
     }
 }
