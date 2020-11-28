@@ -1,5 +1,6 @@
 package it.multicoredev.minesecurity;
 
+import it.multicoredev.mbcore.spigot.Chat;
 import it.multicoredev.mclib.yaml.Configuration;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -66,7 +67,7 @@ public class MineSecurity extends JavaPlugin implements Listener {
         String ip = event.getRealAddress().getHostAddress();
         String port = event.getHostname();
 
-        if (!address.equalsIgnoreCase(ip) || !port.endsWith(":" + port)) {
+        if (!address.equalsIgnoreCase(ip) || !port.endsWith(":" + this.port)) {
             logger.log(event.getPlayer().getName() + " tried to login from an external bungeecord. (" + ip + ":" + port.split(":")[1] + ")");
 
             event.setResult(PlayerLoginEvent.Result.KICK_OTHER);
